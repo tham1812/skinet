@@ -1,13 +1,15 @@
+using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-//builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<iProductRepository, ProductRepository>();   
 
 builder.Services.AddControllers(); 
+
+builder.Services.AddLogging();
 
 var configuration = builder.Configuration;
 
@@ -15,11 +17,21 @@ builder.Services.AddDbContext<StoreContext>(x =>
     x.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-//     app.MapOpenApi();
-// }
+using (var scope = app.Services.CreateScope()){
+    var services = scope.ServiceProvider;
+    var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+    try{
+        var context = services.GetRequiredService<StoreContext>();
+        await context.Database.MigrateAsync();
+        await StoreContextSeed.SeedAsync(context, loggerFactory);
+    }
+    catch (Exception ex) {
+        var logger = loggerFactory.CreateLogger<Program>();
+        logger.LogError(ex, "An error occured during migration");
+    }
+}
+
+app.Run();
 
 app.MapControllers();
 
@@ -44,7 +56,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-app.Run();
+
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
