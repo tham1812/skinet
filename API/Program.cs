@@ -1,3 +1,4 @@
+using API.Helpers;
 using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddScoped<iProductRepository, ProductRepository>();   
-
+builder.Services.AddScoped(typeof(IGenericRepository<>), (typeof(GenericRepository<>)));
+builder.Services.AddAutoMapper(typeof(MappingProfiles));
 builder.Services.AddControllers(); 
 
 builder.Services.AddLogging();
@@ -31,11 +33,12 @@ using (var scope = app.Services.CreateScope()){
     }
 }
 
-app.Run();
-
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
 app.MapControllers();
 
-app.UseHttpsRedirection();
+app.Run();
 
 var summaries = new[]
 {
