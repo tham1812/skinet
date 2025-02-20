@@ -1,13 +1,11 @@
+using API.Extensions;
 using API.Helpers;
-using Core.Interfaces;
+using API.Middleware;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-builder.Services.AddScoped<iProductRepository, ProductRepository>();   
-builder.Services.AddScoped(typeof(IGenericRepository<>), (typeof(GenericRepository<>)));
 builder.Services.AddAutoMapper(typeof(MappingProfiles));
 builder.Services.AddControllers(); 
 
@@ -17,6 +15,10 @@ var configuration = builder.Configuration;
 
 builder.Services.AddDbContext<StoreContext>(x =>
     x.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddApplicationServices();
+builder.Services.AddSwaggerDocumentation();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope()){
@@ -33,8 +35,11 @@ using (var scope = app.Services.CreateScope()){
     }
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
+app.UseStatusCodePagesWithReExecute("/errors/{0}");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseSwaggerDocumention();
 app.UseRouting();
 app.MapControllers();
 
